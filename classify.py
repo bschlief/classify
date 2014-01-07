@@ -7,27 +7,35 @@ from pybrain.supervised.trainers import BackpropTrainer
 from pybrain.datasets import SupervisedDataSet
 from random import randint
 
-json_file = open("data.json")
+json_file = open('sta16-train.json')
 json_data = json.load(json_file)
 json_file.close()
 
-dataset = SupervisedDataSet(2,1)
+num_inputs = 16*16  # 16 by 16 pixels
+num_outputs = 10    # 10 digits of output, 0-9, although 0 is marked as 10, inexplicably
+num_hidden_nodes = 64
+training_epochs = 100
+
+dataset = SupervisedDataSet(num_inputs,num_outputs)
 
 for sample in json_data:
-    input0 = sample['in'][0]/9.0
-    input1 = sample['in'][1]/9.0
-    output0 = sample['out'][0]/9.0
-    dataset.addSample((input0,input1), (output0,))
+    dataset.addSample(sample['input'], sample['target'])
 
-net = buildNetwork(2, 3, 1, bias=True, hiddenclass=TanhLayer, outclass=SoftmaxLayer)
-#net = buildNetwork(2, 10, 1, bias=True, hiddenclass=TanhLayer)
+net = buildNetwork(num_inputs,
+        num_hidden_nodes,
+        num_outputs,
+        outclass=SoftmaxLayer)
 trainer = BackpropTrainer(net,dataset)
 
-for i in range(1,100000):
+for i in range(1,training_epochs+1):
+    print("{0} of {1} epochs complete".format(i, training_epochs))
     trainer.train()
 
-for i in range(1,100):
-    one = randint(0,9)
-    two = randint(0,9)
-    print "result of {0} + {1}".format(one/9.0, two/9.0)
-    print net.activate((one,two))*9.0
+json_file = open('sta16-test.json')
+json_data = json.load(json_file)
+json_file.close()
+
+for idx, test_item in enumerate(json_data):
+    result = net.activate(test_item['input'])
+    print "Item({0}): target was {1}, output was {2}".format(idx, test_item['target'], result)
+
